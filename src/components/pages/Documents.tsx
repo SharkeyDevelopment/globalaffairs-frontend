@@ -1,7 +1,14 @@
 import { useState, useMemo, useRef, useCallback, useEffect } from 'react';
 import { Trash2, Upload, Loader2, FileUp, CheckCircle2 } from 'lucide-react';
 import { AgGridReact } from 'ag-grid-react';
-import { AllCommunityModule, ModuleRegistry, themeQuartz, type ColDef, type ICellRendererParams } from 'ag-grid-community';
+import {
+  AllCommunityModule,
+  ModuleRegistry,
+  themeQuartz,
+  type ColDef,
+  type GridApi,
+  type ICellRendererParams,
+} from 'ag-grid-community';
 import { Button } from '@/components/ui/button';
 import {
   AlertDialog,
@@ -46,7 +53,7 @@ function StatusRenderer({ value }: ICellRendererParams<Document, Document['statu
 function TagsRenderer({ value }: ICellRendererParams<Document, string[]>) {
   if (!value) return null;
   return (
-    <div className="inline-flex flex-wrap items-center gap-1">
+    <div className="flex flex-wrap items-center gap-1 py-1">
       {value.map((tag) => (
         <span
           key={tag}
@@ -74,6 +81,7 @@ export function Documents() {
   const [uploadState, setUploadState] = useState<UploadState>('idle');
   const [uploadFileName, setUploadFileName] = useState('');
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const gridApiRef = useRef<GridApi<Document> | null>(null);
 
   const fetchDocuments = useCallback(async () => {
     try {
@@ -96,6 +104,10 @@ export function Documents() {
     const interval = setInterval(fetchDocuments, 3000);
     return () => clearInterval(interval);
   }, [documents, fetchDocuments]);
+
+  useEffect(() => {
+    gridApiRef.current?.resetRowHeights();
+  }, [documents]);
 
   const handleUpload = useCallback(async (file: File) => {
     setUploadFileName(file.name);
@@ -159,6 +171,8 @@ export function Documents() {
         headerName: 'Tags',
         flex: 1,
         cellRenderer: TagsRenderer,
+        autoHeight: true,
+        wrapText: true,
       },
       {
         field: 'uploadedAt',
@@ -275,11 +289,16 @@ export function Documents() {
           <AgGridReact<Document>
             rowData={documents}
             columnDefs={columnDefs}
-            rowHeight={48}
             domLayout="autoHeight"
             pagination={true}
             paginationPageSize={10}
             getRowId={(params) => params.data.id}
+            onGridReady={(event) => {
+              gridApiRef.current = event.api;
+            }}
+            onFirstDataRendered={(event) => {
+              event.api.resetRowHeights();
+            }}
             theme={themeQuartz}
           />
         )}

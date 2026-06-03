@@ -1,5 +1,5 @@
 import { useState, useRef } from 'react';
-import { Send, ChevronDown, Loader2, RotateCcw } from 'lucide-react';
+import { Send, ChevronDown, Loader2, RotateCcw, Lightbulb, Globe, ShieldCheck, BarChart3, FileText, Landmark } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import {
@@ -7,8 +7,42 @@ import {
   CollapsibleContent,
   CollapsibleTrigger,
 } from '@/components/ui/collapsible';
+import { ChatMarkdown } from '@/components/chat/ChatMarkdown';
 import { api } from '@/lib/api';
 import type { ChatMessage } from '@/types';
+
+const SUGGESTION_PROMPTS = [
+  {
+    icon: Globe,
+    label: 'Trade policy risks',
+    prompt: 'What are the top trade policy risks in the Asia-Pacific region and their estimated financial impact?',
+  },
+  {
+    icon: ShieldCheck,
+    label: 'EU AI Act status',
+    prompt: 'Summarize the current compliance status for the EU AI Act and any outstanding action items.',
+  },
+  {
+    icon: BarChart3,
+    label: 'Climate progress',
+    prompt: 'What progress have we made toward our 2030 climate commitments, including Scope 1, 2, and 3 emissions?',
+  },
+  {
+    icon: Landmark,
+    label: 'US legislation tracker',
+    prompt: 'Which US congressional bills have the highest Legislative Impact Model scores and what are our positions?',
+  },
+  {
+    icon: Lightbulb,
+    label: 'GenAI policy guardrails',
+    prompt: 'What are the key principles and prohibited uses outlined in the GA Responsible Use Policy for GenAI?',
+  },
+  {
+    icon: FileText,
+    label: 'Geopolitical top risks',
+    prompt: 'List the current top 5 geopolitical risks and their severity scores from the risk assessment framework.',
+  },
+] as const;
 
 export function AskQuestion() {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
@@ -16,8 +50,8 @@ export function AskQuestion() {
   const [loading, setLoading] = useState(false);
   const sessionIdRef = useRef(crypto.randomUUID());
 
-  async function handleSubmit() {
-    const trimmed = input.trim();
+  async function handleSubmitWith(text: string) {
+    const trimmed = text.trim();
     if (!trimmed || loading) return;
 
     const userMessage: ChatMessage = {
@@ -49,6 +83,10 @@ export function AskQuestion() {
     } finally {
       setLoading(false);
     }
+  }
+
+  async function handleSubmit() {
+    handleSubmitWith(input);
   }
 
   async function handleNewSession() {
@@ -89,8 +127,36 @@ export function AskQuestion() {
       {/* Chat thread */}
       <div className="flex-1 overflow-y-auto space-y-4 pb-4">
         {messages.length === 0 && !loading && (
-          <div className="flex h-full items-center justify-center">
-            <p className="text-sm text-muted-foreground">Ask a question to get started</p>
+          <div className="flex h-full flex-col items-center justify-center gap-6">
+            <div className="text-center">
+              <h2 className="text-lg font-semibold text-foreground">
+                Global Affairs Intelligence Assistant
+              </h2>
+              <p className="mt-1 text-sm text-muted-foreground">
+                Ask a question about your uploaded policy documents, or try a suggestion below.
+              </p>
+            </div>
+            <div className="grid w-full max-w-2xl grid-cols-1 gap-2 sm:grid-cols-2">
+              {SUGGESTION_PROMPTS.map((s) => (
+                <Button
+                  key={s.label}
+                  variant="outline"
+                  className="h-auto justify-start gap-3 px-4 py-3 text-left whitespace-normal"
+                  onClick={() => {
+                    setInput(s.prompt);
+                    handleSubmitWith(s.prompt);
+                  }}
+                >
+                  <s.icon className="size-4 shrink-0 text-primary" />
+                  <div className="min-w-0">
+                    <p className="text-sm font-medium leading-tight">{s.label}</p>
+                    <p className="mt-0.5 text-xs text-muted-foreground line-clamp-2 leading-snug">
+                      {s.prompt}
+                    </p>
+                  </div>
+                </Button>
+              ))}
+            </div>
           </div>
         )}
         {messages.map((msg) => (
@@ -105,7 +171,11 @@ export function AskQuestion() {
                   : 'border border-border bg-card text-card-foreground'
               }`}
             >
-              <p className="whitespace-pre-wrap">{msg.content}</p>
+              {msg.role === 'assistant' ? (
+                <ChatMarkdown content={msg.content} />
+              ) : (
+                <p className="whitespace-pre-wrap">{msg.content}</p>
+              )}
               {msg.sources && msg.sources.length > 0 && (
                 <Collapsible className="mt-3">
                   <CollapsibleTrigger className="flex items-center gap-1 text-xs font-medium opacity-70 hover:opacity-100 transition-opacity">
