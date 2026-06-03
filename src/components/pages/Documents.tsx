@@ -46,7 +46,7 @@ function StatusRenderer({ value }: ICellRendererParams<Document, Document['statu
 function TagsRenderer({ value }: ICellRendererParams<Document, string[]>) {
   if (!value) return null;
   return (
-    <div className="flex flex-wrap gap-1">
+    <div className="inline-flex flex-wrap items-center gap-1">
       {value.map((tag) => (
         <span
           key={tag}
@@ -90,13 +90,20 @@ export function Documents() {
     fetchDocuments();
   }, [fetchDocuments]);
 
+  useEffect(() => {
+    const hasProcessing = documents.some((doc) => doc.status === 'processing');
+    if (!hasProcessing) return;
+    const interval = setInterval(fetchDocuments, 3000);
+    return () => clearInterval(interval);
+  }, [documents, fetchDocuments]);
+
   const handleUpload = useCallback(async (file: File) => {
     setUploadFileName(file.name);
     setUploadState('uploading');
 
     try {
-      const created = await api.createDocument({ name: file.name, tags: [] });
-      setDocuments((prev) => [...prev, created]);
+      const created = await api.createDocument(file, []);
+      setDocuments((prev) => [created, ...prev]);
       setUploadState('done');
       setTimeout(() => {
         setUploadState('idle');

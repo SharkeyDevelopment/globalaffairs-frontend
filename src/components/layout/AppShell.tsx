@@ -12,7 +12,14 @@ interface AppShellProps {
 }
 
 export function AppShell({ user, onSignOut }: AppShellProps) {
-  const [activePage, setActivePage] = useState<PageKey>('ask');
+  const [activePage, setActivePageState] = useState<PageKey>(
+    () => (sessionStorage.getItem('activePage') as PageKey) || 'ask',
+  );
+
+  const setActivePage = (page: PageKey) => {
+    sessionStorage.setItem('activePage', page);
+    setActivePageState(page);
+  };
 
   return (
     <div className="flex h-screen overflow-hidden bg-background">
