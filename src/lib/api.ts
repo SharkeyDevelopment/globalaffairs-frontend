@@ -80,7 +80,7 @@ export interface QueryResult {
 
 export const api = {
   getDocuments: () =>
-    jsonRequest<ApiDocument[]>('/api/documents').then((docs) => docs.map(toDocument)),
+    jsonRequest<ApiDocument[]>('/api/documents/').then((docs) => docs.map(toDocument)),
 
   getDocument: (id: string) =>
     jsonRequest<ApiDocument>(`/api/documents/${id}`).then(toDocument),
@@ -89,7 +89,7 @@ export const api = {
     const form = new FormData();
     form.append('file', file);
     form.append('tags', JSON.stringify(tags));
-    return request<ApiDocument>('/api/documents', { method: 'POST', body: form }).then(toDocument);
+    return request<ApiDocument>('/api/documents/', { method: 'POST', body: form }).then(toDocument);
   },
 
   deleteDocument: (id: string) =>
