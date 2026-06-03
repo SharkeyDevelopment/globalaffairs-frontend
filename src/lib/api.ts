@@ -1,6 +1,15 @@
 import type { Document, ChatMessage, Source } from '../types';
 
-const BASE_URL = import.meta.env.VITE_API_URL ?? 'http://localhost:8080';
+function resolveApiBaseUrl(): string {
+  const raw = import.meta.env.VITE_API_URL ?? 'http://localhost:8080';
+  // Production pages are HTTPS; Cloud Run only serves HTTPS — upgrade mistaken http:// API URLs.
+  if (import.meta.env.PROD && raw.startsWith('http://') && !raw.includes('localhost')) {
+    return raw.replace(/^http:\/\//, 'https://');
+  }
+  return raw;
+}
+
+const BASE_URL = resolveApiBaseUrl();
 
 // Generic fetch — no Content-Type header (used for FormData uploads too)
 async function request<T>(path: string, options?: RequestInit): Promise<T> {
