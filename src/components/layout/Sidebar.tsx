@@ -80,8 +80,8 @@ export function Sidebar({ user, activePage, setActivePage, onSignOut }: SidebarP
             if (collapsed) {
               return (
                 <li key={item.key}>
-                  <Tooltip delayDuration={0}>
-                    <TooltipTrigger asChild>{btn}</TooltipTrigger>
+                  <Tooltip>
+                    <TooltipTrigger delay={0} render={btn} />
                     <TooltipContent side="right">{item.label}</TooltipContent>
                   </Tooltip>
                 </li>
