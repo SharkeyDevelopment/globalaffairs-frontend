@@ -1,73 +1,81 @@
-# React + TypeScript + Vite
+# GA Policy Hub — Frontend
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+The web interface for the GA Policy Hub demo — a tool that lets users upload regulatory documents and query them with AI-powered natural language search. Answers come back with source citations pointing to specific documents and pages.
 
-Currently, two official plugins are available:
+## Features
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+- **Document Management** — Drag-and-drop upload with live processing status, tagging, and deletion
+- **AI Q&A Chat** — Ask questions across all uploaded documents; responses include expandable source citations
+- **Markdown Responses** — AI answers rendered with lists, emphasis, and structure
+- **Data Grid** — Sortable, paginated document table with status badges and tag chips
 
-## React Compiler
+## Architecture
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
-
-## Expanding the ESLint configuration
-
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
-
-```js
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-
-      // Remove tseslint.configs.recommended and replace with this
-      tseslint.configs.recommendedTypeChecked,
-      // Alternatively, use this for stricter rules
-      tseslint.configs.strictTypeChecked,
-      // Optionally, add this for stylistic rules
-      tseslint.configs.stylisticTypeChecked,
-
-      // Other configs...
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+```
+┌───────────────────────────────────────────────┐
+│                 React SPA                      │
+│                                               │
+│  Landing Page → App Shell (Sidebar + Pages)   │
+│                                               │
+│  ┌─────────────┐        ┌──────────────────┐  │
+│  │  Documents   │        │   Ask Question    │  │
+│  │  (Upload +   │        │   (Chat thread +  │  │
+│  │   Grid)      │        │    citations)     │  │
+│  └──────┬───────┘        └────────┬─────────┘  │
+│         │                         │             │
+│         └─────────┬───────────────┘             │
+│                   │                             │
+│          ┌────────▼────────┐                    │
+│          │   API Client     │                    │
+│          └────────┬────────┘                    │
+└───────────────────┼─────────────────────────────┘
+                    │ HTTP
+           ┌────────▼────────┐
+           │  FastAPI Backend │
+           └─────────────────┘
 ```
 
-You can also install [eslint-plugin-react-x](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-dom) for React-specific lint rules:
+## Tech Stack
 
-```js
-// eslint.config.js
-import reactX from 'eslint-plugin-react-x'
-import reactDom from 'eslint-plugin-react-dom'
+| Layer | Technology |
+|-------|-----------|
+| Framework | React 19 |
+| Language | TypeScript 6 |
+| Build | Vite 8 |
+| Styling | Tailwind CSS 4 |
+| Components | shadcn/ui |
+| Data Grid | AG Grid |
+| Markdown | react-markdown + remark-gfm |
+| Icons | Lucide React |
 
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-      // Enable lint rules for React
-      reactX.configs['recommended-typescript'],
-      // Enable lint rules for React DOM
-      reactDom.configs.recommended,
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+## Project Structure
+
 ```
+frontend/
+├── src/
+│   ├── App.tsx                 # Auth gate + page routing
+│   ├── main.tsx                # Entry point
+│   ├── index.css               # Tailwind + theme
+│   ├── types/index.ts          # Shared interfaces
+│   ├── lib/
+│   │   ├── api.ts             # Backend client (handles case conversion)
+│   │   └── utils.ts           # Helpers
+│   └── components/
+│       ├── layout/            # AppShell, Sidebar
+│       ├── pages/             # Documents, AskQuestion, LandingPage
+│       ├── chat/              # Markdown renderer
+│       └── ui/                # shadcn/ui primitives
+├── package.json
+├── vite.config.ts
+└── tsconfig.json
+```
+
+## Running Locally
+
+```bash
+cd frontend
+npm install
+npm run dev
+```
+
+Opens at `http://localhost:5173`. Expects the backend at `http://localhost:8080` (configurable via `VITE_API_URL` in `.env.local`).
