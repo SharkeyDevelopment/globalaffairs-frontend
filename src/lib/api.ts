@@ -11,10 +11,32 @@ function resolveApiBaseUrl(): string {
 
 const BASE_URL = resolveApiBaseUrl();
 
+export class ApiError extends Error {
+  status: number;
+  detail: string;
+
+  constructor(status: number, detail: string, path: string) {
+    super(`API error ${status}: ${path}`);
+    this.status = status;
+    this.detail = detail;
+  }
+
+  get isRateLimited() {
+    return this.status === 429;
+  }
+}
+
 // Generic fetch — no Content-Type header (used for FormData uploads too)
 async function request<T>(path: string, options?: RequestInit): Promise<T> {
   const res = await fetch(`${BASE_URL}${path}`, options);
-  if (!res.ok) throw new Error(`API error ${res.status}: ${path}`);
+  if (!res.ok) {
+    let detail = `Request failed`;
+    try {
+      const body = await res.json();
+      detail = body.detail ?? detail;
+    } catch { /* ignore parse errors */ }
+    throw new ApiError(res.status, detail, path);
+  }
   if (res.status === 204) return undefined as T;
   return res.json();
 }
@@ -78,7 +100,41 @@ export interface QueryResult {
   sessionId: string;
 }
 
+export interface Usage {
+  date: string;
+  aiRequests: number;
+  aiLimit: number;
+  uploads: number;
+  uploadLimit: number;
+  deletes: number;
+  deleteLimit: number;
+}
+
+interface ApiUsage {
+  date: string;
+  ai_requests: number;
+  ai_limit: number;
+  uploads: number;
+  upload_limit: number;
+  deletes: number;
+  delete_limit: number;
+}
+
+function toUsage(u: ApiUsage): Usage {
+  return {
+    date: u.date,
+    aiRequests: u.ai_requests,
+    aiLimit: u.ai_limit,
+    uploads: u.uploads,
+    uploadLimit: u.upload_limit,
+    deletes: u.deletes,
+    deleteLimit: u.delete_limit,
+  };
+}
+
 export const api = {
+  getUsage: () => jsonRequest<ApiUsage>('/api/usage').then(toUsage),
+
   getDocuments: () =>
     jsonRequest<ApiDocument[]>('/api/documents/').then((docs) => docs.map(toDocument)),
 

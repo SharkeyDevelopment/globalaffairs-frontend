@@ -8,7 +8,8 @@ import {
   CollapsibleTrigger,
 } from '@/components/ui/collapsible';
 import { ChatMarkdown } from '@/components/chat/ChatMarkdown';
-import { api } from '@/lib/api';
+import { UsageBanner } from '@/components/UsageBanner';
+import { api, ApiError } from '@/lib/api';
 import type { ChatMessage } from '@/types';
 
 const SUGGESTION_PROMPTS = [
@@ -74,10 +75,14 @@ export function AskQuestion() {
       setMessages((prev) => [...prev, assistantMessage]);
     } catch (err) {
       console.error('Query failed:', err);
+      const detail =
+        err instanceof ApiError && err.isRateLimited
+          ? err.detail
+          : 'Sorry, something went wrong. Please try again.';
       const errorMessage: ChatMessage = {
         id: String(Date.now() + 1),
         role: 'assistant',
-        content: 'Sorry, something went wrong. Please try again.',
+        content: detail,
       };
       setMessages((prev) => [...prev, errorMessage]);
     } finally {
@@ -109,19 +114,22 @@ export function AskQuestion() {
   return (
     <div className="flex h-full flex-col p-6">
       {/* Header */}
-      <div className="mb-4 flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold text-foreground">Ask a Question</h1>
-          <p className="text-sm text-muted-foreground">
-            Query across your uploaded policy documents
-          </p>
+      <div className="mb-4 flex flex-col gap-3">
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-2xl font-bold text-foreground">Ask a Question</h1>
+            <p className="text-sm text-muted-foreground">
+              Query across your uploaded policy documents
+            </p>
+          </div>
+          {messages.length > 0 && (
+            <Button variant="outline" size="sm" className="gap-2" onClick={handleNewSession}>
+              <RotateCcw className="h-3.5 w-3.5" />
+              New Session
+            </Button>
+          )}
         </div>
-        {messages.length > 0 && (
-          <Button variant="outline" size="sm" className="gap-2" onClick={handleNewSession}>
-            <RotateCcw className="h-3.5 w-3.5" />
-            New Session
-          </Button>
-        )}
+        <UsageBanner />
       </div>
 
       {/* Chat thread */}

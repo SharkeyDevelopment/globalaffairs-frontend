@@ -20,7 +20,8 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
-import { api } from '@/lib/api';
+import { UsageBanner } from '@/components/UsageBanner';
+import { api, ApiError } from '@/lib/api';
 import type { Document } from '@/types';
 
 ModuleRegistry.registerModules([AllCommunityModule]);
@@ -71,7 +72,7 @@ function formatDate(dateStr: string): string {
   return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
 }
 
-type UploadState = 'idle' | 'uploading' | 'done';
+type UploadState = 'idle' | 'uploading' | 'done' | 'rate_limited';
 
 export function Documents() {
   const [documents, setDocuments] = useState<Document[]>([]);
@@ -80,6 +81,7 @@ export function Documents() {
   const [dragOver, setDragOver] = useState(false);
   const [uploadState, setUploadState] = useState<UploadState>('idle');
   const [uploadFileName, setUploadFileName] = useState('');
+  const [uploadError, setUploadError] = useState('');
   const fileInputRef = useRef<HTMLInputElement>(null);
   const gridApiRef = useRef<GridApi<Document> | null>(null);
 
@@ -111,6 +113,7 @@ export function Documents() {
 
   const handleUpload = useCallback(async (file: File) => {
     setUploadFileName(file.name);
+    setUploadError('');
     setUploadState('uploading');
 
     try {
@@ -123,8 +126,14 @@ export function Documents() {
       }, 1500);
     } catch (err) {
       console.error('Upload failed:', err);
-      setUploadState('idle');
-      setUploadFileName('');
+      if (err instanceof ApiError && err.isRateLimited) {
+        setUploadError(err.detail);
+        setUploadState('rate_limited');
+        setTimeout(() => { setUploadState('idle'); setUploadError(''); }, 5000);
+      } else {
+        setUploadState('idle');
+        setUploadFileName('');
+      }
     }
   }, []);
 
@@ -148,6 +157,11 @@ export function Documents() {
       setDocuments((prev) => prev.filter((d) => d.id !== deleteTarget.id));
     } catch (err) {
       console.error('Delete failed:', err);
+      if (err instanceof ApiError && err.isRateLimited) {
+        setUploadError(err.detail);
+        setUploadState('rate_limited');
+        setTimeout(() => { setUploadState('idle'); setUploadError(''); }, 5000);
+      }
     }
     setDeleteTarget(null);
   }
@@ -210,11 +224,14 @@ export function Documents() {
   return (
     <div className="flex h-full flex-col gap-6 overflow-y-auto p-6">
       {/* Header */}
-      <div>
-        <h1 className="text-2xl font-bold text-foreground">Documents</h1>
-        <p className="text-sm text-muted-foreground">
-          Upload and manage your policy documents
-        </p>
+      <div className="flex flex-col gap-3">
+        <div>
+          <h1 className="text-2xl font-bold text-foreground">Documents</h1>
+          <p className="text-sm text-muted-foreground">
+            Upload and manage your policy documents
+          </p>
+        </div>
+        <UsageBanner />
       </div>
 
       {/* Dropzone */}
@@ -273,6 +290,17 @@ export function Documents() {
             <div className="text-center">
               <p className="text-sm font-medium text-foreground">Upload complete</p>
               <p className="mt-0.5 text-xs text-muted-foreground">{uploadFileName}</p>
+            </div>
+          </div>
+        )}
+
+        {uploadState === 'rate_limited' && (
+          <div className="flex flex-col items-center gap-3">
+            <div className="flex h-12 w-12 items-center justify-center rounded-full bg-destructive/10">
+              <Upload className="h-6 w-6 text-destructive" />
+            </div>
+            <div className="text-center">
+              <p className="text-sm font-medium text-destructive">{uploadError}</p>
             </div>
           </div>
         )}
